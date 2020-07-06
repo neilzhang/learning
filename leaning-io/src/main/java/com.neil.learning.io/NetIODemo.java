@@ -1,9 +1,6 @@
 package com.neil.learning.io;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +26,14 @@ public class NetIODemo {
         }
 
         try (Client client = new Client("127.0.0.1", 8080)) {
-            String request = "hello server";
+            String request = "你好";
             System.out.println("send request to the server: " + request);
-            String response = client.write(request.getBytes(StandardCharsets.UTF_8));
+            String response = client.writeLine(request);
+            System.out.println("get response from the server: " + response);
+
+            request = "再见";
+            System.out.println("send request to the server: " + request);
+            response = client.writeLine(request);
             System.out.println("get response from the server: " + response);
         } catch (IOException e) {
             e.printStackTrace();
@@ -103,15 +105,24 @@ public class NetIODemo {
         public void run() {
             try {
                 InputStream inputStream = socket.getInputStream();
-                byte[] data = new byte[1024];
-                inputStream.read(data);
-                System.out.println("server received data: " + new String(data, StandardCharsets.UTF_8));
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String line;
+                while ((line = bufferedReader.readLine()) != null) {
+                    System.out.println("server received data: " + line);
 
-                OutputStream outputStream = socket.getOutputStream();
-                String response = "hello client";
-                outputStream.write(response.getBytes(StandardCharsets.UTF_8));
-                outputStream.flush();
-                System.out.println("server return data: " + response);
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    OutputStream outputStream = socket.getOutputStream();
+                    String response = line;
+                    outputStream.write((response + "\n").getBytes(StandardCharsets.UTF_8));
+                    outputStream.flush();
+                    System.out.println("server return data: " + response);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -134,22 +145,16 @@ public class NetIODemo {
             this.socket = new Socket(host, port);
         }
 
-        public String write(byte[] data) throws IOException {
+        public String writeLine(String line) throws IOException {
             OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(data);
+            outputStream.write((line + "\n").getBytes(StandardCharsets.UTF_8));
             outputStream.flush();
 
-            //等待客户端得到响应
-            try {
-                TimeUnit.SECONDS.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
             InputStream inputStream = socket.getInputStream();
-            byte[] response = new byte[1024];
-            inputStream.read(response);
-            return new String(response, StandardCharsets.UTF_8);
+            InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            String response = bufferedReader.readLine();
+            return response == null ? "" : response;
         }
 
         public void close() throws IOException {
