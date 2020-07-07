@@ -1,6 +1,7 @@
 package com.neil.learning.io;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -142,7 +143,11 @@ public class NetIODemo {
         private Socket socket;
 
         public Client(String host, int port) throws IOException {
-            this.socket = new Socket(host, port);
+            Socket socket = new Socket();
+            socket.setKeepAlive(true);
+            socket.setSoTimeout(5000);
+            socket.bind(new InetSocketAddress(host, port));
+            this.socket = socket;
         }
 
         public String writeLine(String line) throws IOException {
